@@ -21,7 +21,11 @@ export function useAuth() {
       setLoading(true);
       const ref = doc(db, "users", authUser.uid);
       const docSnap = await getDoc(ref);
-      setUser(docSnap.data());
+      if (docSnap.exists()) {
+        setUser(docSnap.data());
+      } else {
+        console.log("No such document!");
+      }
       setLoading(false);
     }
 
@@ -29,7 +33,7 @@ export function useAuth() {
       if (authUser) fetchData();
       else setLoading(false); // Not signed in
     }
-  }, [authLoading]);
+  }, [authLoading, authUser]);
 
   return { user, isLoading, error };
 }
@@ -41,7 +45,6 @@ export function useLogin() {
 
   async function login({ email, password, redirectTo = DASHBOARD }) {
     setLoading(true);
-
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast({
@@ -61,7 +64,6 @@ export function useLogin() {
         position: "top",
         duration: 5000,
       });
-      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -75,14 +77,8 @@ export function useRegister() {
   const toast = useToast();
   const navigate = useNavigate();
 
-  async function register({
-    username,
-    email,
-    password,
-    redirectTo = DASHBOARD,
-  }) {
+  async function register({ username, email, password, redirectTo = DASHBOARD }) {
     setLoading(true);
-
     const usernameExists = await isUsernameExists(username);
 
     if (usernameExists) {
@@ -97,7 +93,6 @@ export function useRegister() {
     } else {
       try {
         const res = await createUserWithEmailAndPassword(auth, email, password);
-
         await setDoc(doc(db, "users", res.user.uid), {
           id: res.user.uid,
           username: username.toLowerCase(),
@@ -148,7 +143,7 @@ export function useLogout() {
         duration: 5000,
       });
       navigate(LOGIN);
-    } // else: show error [signOut() returns false if failed]
+    }
   }
 
   return { logout, isLoading };
